@@ -287,6 +287,10 @@ class Net2NetTransformer(pl.LightningModule):
         if N is not None:
             x = x[:N]
             c = c[:N]
+        in_channels = self.first_stage_model.encoder.in_channels
+        if in_channels != x.size(1):
+            x = x[:, :in_channels, ...]
+            c = c[:, :in_channels, ...]
         return x, c
 
     def shared_step(self, batch, batch_idx):

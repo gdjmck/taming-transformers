@@ -2,7 +2,10 @@ from osgeo import gdal
 import torch
 import numpy as np
 import json
+import glob
+import os
 from torch.utils.data import Dataset
+from taming.data.base import ImagePaths, ImagePaths2, ConcatDatasetWithIndex
 
 
 class StreetMap(Dataset):
@@ -26,7 +29,7 @@ class StreetMap(Dataset):
             self.index_list = json.load(f)['{}_index'.format(phase)]
 
     def __len__(self):
-        return len(self.index_list)
+        return min(5000, len(self.index_list))
 
     def __getitem__(self, i):
         index = self.index_list[i]
@@ -44,3 +47,29 @@ class StreetMap(Dataset):
             return {'image': torch.tensor(patch_label[..., None], dtype=torch.float32)}
         elif self.get_type == 'target':
             return {'image': torch.tensor(patch_target[..., None], dtype=torch.float32)}
+
+
+class StreetNetwork(Dataset):
+    def __init__(self, size, keys=None, train: bool=True):
+        super(StreetNetwork, self).__init__()
+        root = r'd:\Documents\repos\streetnetwork\data\imgs'
+        files = glob.glob(os.path.join(root, '*.png'))
+        if train:
+            files = files[:int(len(files) * 0.8)]
+        else:
+            files = files[int(len(files) * 0.8):]
+        self.data = ImagePaths(paths=files, size=size, random_crop=False)
+        self.keys = keys
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, i):
+        example = self.data[i]
+        ex = {}
+        if self.keys is not None:
+            for k in self.keys:
+                ex[k] = example[k]
+        else:
+            ex = example
+        return ex
